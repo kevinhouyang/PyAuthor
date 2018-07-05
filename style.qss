@@ -1,0 +1,17 @@
+QPlainTextEdit {
+    color: black;
+    background: #f4f2ef;
+}
+
+QWidget {
+    border: none;
+}
+
+QMainWindow::separator {
+    width: 2;
+    background: white;
+}
+
+QMainWindow::separator::hover {
+    background: grey;
+}
