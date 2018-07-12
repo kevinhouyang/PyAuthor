@@ -1,6 +1,6 @@
 QPlainTextEdit {
-    color: black;
-    background: #f4f2ef;
+    background: white;
+    color: grey;
 }
 
 QWidget {
@@ -14,4 +14,13 @@ QMainWindow::separator {
 
 QMainWindow::separator::hover {
     background: grey;
+}
+
+QTreeView {
+    background: white;
+    color: grey;
+}
+
+QDockWidget {
+    background: white;
 }

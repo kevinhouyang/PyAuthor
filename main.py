@@ -3,7 +3,7 @@ import os
 # from PyQt5 import QtGui, QtCore
 # from PyQt5.QtWidgets import QAction, QMainWindow, QPlainTextEdit, QFileDialog, QApplication
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import QAction, QMainWindow, QPlainTextEdit, QFileDialog, QApplication, QTreeView, QFileSystemModel, QDockWidget
+from PyQt5.QtWidgets import QAction, QMainWindow, QPlainTextEdit, QFileDialog, QApplication, QTreeView, QFileSystemModel, QDockWidget, QMessageBox
 from PyQt5.QtCore import Qt
 
 class Main(QMainWindow):
@@ -12,6 +12,7 @@ class Main(QMainWindow):
         QMainWindow.__init__(self, parent)
 
         self.filename = ""
+        self.changed = False
 
         self.initUI()
 
@@ -42,7 +43,7 @@ class Main(QMainWindow):
         self.exitAction = QAction("Exit", self)
         self.exitAction.setStatusTip("Exit word processor")
         self.exitAction.setShortcut("Ctrl+W")
-        self.exitAction.triggered.connect(sys.exit)
+        self.exitAction.triggered.connect(self.close)
 
         self.hideDirAction = QAction("Toggle Dir Visibility", self)
         self.hideDirAction.setStatusTip("Show/Hide the Directory View")
@@ -73,10 +74,8 @@ class Main(QMainWindow):
 
     def initFileTree(self):
         #TODO: fix the scope of these variables
-        #TODO: setpathindex
-        #TODO: toggle hideable
 
-        self.dockWidget = QDockWidget(self)
+        self.dockWidget = QDockWidget(self, flags=Qt.FramelessWindowHint)
         # titleWidget = QtWidget(self)
         # self.dockWidget.setTitleBarWidget(titleWidget)
         self.view = QTreeView(self)
@@ -84,20 +83,27 @@ class Main(QMainWindow):
         self.model = QFileSystemModel()
         self.model.setRootPath("/Users/kevinhouyang/Development/")
         self.view.setModel(self.model)
-        self.view.setRootIndex(self.model.index("/Users/kevinhouyang/Development/typy"));
+        self.view.setRootIndex(self.model.index("/Users/kevinhouyang/Development/typy"))
+        self.view.hideColumn(1)
+        self.view.hideColumn(2)
+        self.view.hideColumn(3)
+        self.view.hideColumn(4)
+        self.view.setHeaderHidden(True)
         self.dockWidget.setWidget(self.view)
         self.addDockWidget(Qt.LeftDockWidgetArea,self.dockWidget)
         self.dockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.dockWidget.setVisible(False)
+        self.dockWidget.setTitleBarWidget(None)
 
     def initUI(self):
         self.editor = QPlainTextEdit(self)
+        self.editor.setCenterOnScroll(True)
+        self.editor.textChanged.connect(self.toggleChanged)
         self.document = self.editor.document()
 
         self.document.setDocumentMargin(100)
         self.initFont()
 
-        self.editor.setCenterOnScroll(True)
         self.setWindowIcon(QtGui.QIcon("icons/icon.png"))
 
         self.initAction()
@@ -105,7 +111,6 @@ class Main(QMainWindow):
 
         self.setCentralWidget(self.editor)
         self.initFileTree()
-        # init dockwidget
 
         self.setGeometry(100,100,1030,800)
         self.setWindowTitle("QtWriter")
@@ -114,10 +119,12 @@ class Main(QMainWindow):
     #TODO fix this..? how do i get formatting to show
     def updateFocus(self):
         for i in range(self.document.lineCount()):
-            print(i)
             currBlock = self.document.findBlockByLineNumber(i)
-            print(currBlock.text())
-            currBlock.blockFormat().setBackground(QtGui.QColor(10,10,10))
+            # print(currBlock.text())
+            # print(currBlock.text())
+            # for c in currBlock.text():
+            # currBlock.text().charFormat().setForeground(QtGui.QBrush(QtGui.QColor(10,10,10)))
+            # currBlock.blockFormat().setForeground(QtGui.QBrush(QtGui.QColor(10,10,10)))
 
             # print(currBlock.blockFormat().fontUnderline())
             #
@@ -138,11 +145,13 @@ class Main(QMainWindow):
                 self.document.setPlainText(file.read())
 
         self.setWindowTitle("QtWriter - " + os.path.basename(self.filename))
-        # self.updateFocus()
+        self.updateFocus()
 
     def save(self):
         if not self.filename:
+            # if event is not None:
             self.filename = QFileDialog.getSaveFileName(self, 'Save File')[0]
+
 
         if self.filename:
             if not self.filename.endswith(".txt"):
@@ -159,10 +168,30 @@ class Main(QMainWindow):
         print("just tried to exit!")
 
     def toggleDirVisibility(self):
-        if self.dockWidget.isVisible():
-            self.dockWidget.setVisible(False)
+        self.dockWidget.setVisible(not self.dockWidget.isVisible())
+
+    def toggleChanged(self):
+        self.changed = True
+
+    def closeEvent(self, event):
+        if self.changed:
+            popup = QMessageBox(self)
+            popup.setIcon(QMessageBox.Warning)
+            popup.setText("The document has been modified")
+            popup.setInformativeText("Do you want to save your changes?")
+            popup.setStandardButtons(QMessageBox.Save    |
+                                      QMessageBox.Cancel |
+                                      QMessageBox.Discard)
+            popup.setDefaultButton(QMessageBox.Save)
+            answer = popup.exec_()
+            if answer == QMessageBox.Save:
+                self.save()
+            elif answer == QMessageBox.Discard:
+                event.accept()
+            else:
+                event.ignore()
         else:
-            self.dockWidget.setVisible(True)
+            event.accept()
 
 def main():
     app = QApplication(sys.argv)
